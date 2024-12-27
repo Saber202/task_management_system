@@ -24,3 +24,14 @@ class Task(db.Model):
 
     def __repr__(self):
         return f'<Task {self.title}>'
+
+class ReportSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    start_date = db.Column(db.DateTime, nullable=False)
+    frequency = db.Column(db.String(10), nullable=False)  # daily, weekly, monthly
+    report_time = db.Column(db.Integer, nullable=False)  # Hour (0-23)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user = db.relationship('User', backref=db.backref('report_subscriptions', lazy=True))
+
+    def __repr__(self):
+        return f'<ReportSubscription {self.id}, {self.frequency}, {self.report_time}>'

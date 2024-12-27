@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_jwt_extended import JWTManager
-from extensions import db, bcrypt
-from routes import auth
+from extensions import db, bcrypt, mail
+from routes import *
 from config import Config
 from datetime import datetime
 
@@ -12,6 +12,7 @@ app.config.from_object(Config)
 db.init_app(app)
 bcrypt.init_app(app)
 jwt = JWTManager(app)
+mail.init_app(app)
 
 # Register blueprints
 app.register_blueprint(auth)

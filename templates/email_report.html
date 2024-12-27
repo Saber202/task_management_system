@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Task Report</title>
+</head>
+<body>
+    <h2>Your Task Report ({{ frequency.capitalize() }})</h2>
+    <p>Here is your task report for the past {{ frequency }}:</p>
+    <table border="1">
+        <tr>
+            <th>Task Title</th>
+            <th>Status</th>
+            <th>End Date</th>
+        </tr>
+        {% for task in tasks_report %}
+        <tr>
+            <td>{{ task.title }}</td>
+            <td>{{ task.status }}</td>
+            <td>{{ task.end_date }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

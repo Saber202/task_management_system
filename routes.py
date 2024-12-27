@@ -1,6 +1,12 @@
 from flask import Blueprint, request, jsonify, render_template
-from flask_jwt_extended import create_access_token, jwt_required
-from models import db, User
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from models import db, User, ReportSubscription, Task
+from datetime import datetime, timedelta
+from flask_mail import Message
+from extensions import db, mail
+from models import User, Task, ReportSubscription
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 auth = Blueprint("auth", __name__)
 
@@ -109,3 +115,133 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"}), 200
+
+
+
+
+
+# وظيفة لتوليد التقرير وإرساله بالبريد الإلكتروني
+def send_report(user_id, frequency):
+    now = datetime.utcnow()
+    if frequency == 'daily':
+        end_date = now - timedelta(days=1)
+    elif frequency == 'weekly':
+        end_date = now - timedelta(weeks=1)
+    elif frequency == 'monthly':
+        end_date = now - timedelta(weeks=4)
+
+    tasks = Task.query.filter(
+        Task.user_id == user_id,
+        Task.end_date >= end_date
+    ).all()
+
+    user = User.query.get(user_id)
+    subject = f"Your {frequency} task report"
+    body = "Here are your tasks for the last period:\n"
+    for task in tasks:
+        body += f"{task.title} - {task.status}\n"
+
+    msg = Message(subject, recipients=[user.email], body=body)
+    mail.send(msg)
+
+@auth.route('/subscribe', methods=['POST'])
+@jwt_required()
+def subscribe_report():
+    user_id = get_jwt_identity()
+
+    data = request.get_json()
+    start_date = datetime.strptime(data['start_date'], "%d:%m:%Y %H")
+    frequency = data['frequency']
+    report_time = data['report_time']
+
+    if frequency not in ['daily', 'weekly', 'monthly']:
+        return jsonify({"error": "Invalid frequency"}), 400
+
+    if not (0 <= report_time <= 23):
+        return jsonify({"error": "Invalid report time (0-23 hours)"}), 400
+
+    subscription = ReportSubscription(
+        user_id=user_id,
+        start_date=start_date,
+        frequency=frequency,
+        report_time=report_time
+    )
+
+    db.session.add(subscription)
+    db.session.commit()
+
+    # جدولة إرسال التقرير بناءً على التردد
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        send_report,
+        'interval',
+        hours=24 if frequency == 'daily' else 168 if frequency == 'weekly' else 720,
+        args=[user_id, frequency],
+        start_date=start_date.replace(hour=report_time, minute=0, second=0)
+    )
+    scheduler.start()
+
+    return jsonify({"message": "Subscribed to reports successfully!"}), 201
+
+@auth.route('/unsubscribe', methods=['DELETE'])
+@jwt_required()
+def unsubscribe_report():
+    user_id = get_jwt_identity()
+
+    subscription = ReportSubscription.query.filter_by(user_id=user_id).first()
+    
+    if not subscription:
+        return jsonify({"error": "No subscription found"}), 404
+
+    db.session.delete(subscription)
+    db.session.commit()
+
+    return jsonify({"message": "Unsubscribed from reports successfully!"})
+
+
+
+
+
+# إرسال تقرير عبر البريد الإلكتروني
+def send_report_email(user_email, tasks_report, frequency):
+    msg = Message('Your Task Report',
+                  sender='your-email@gmail.com',
+                  recipients=[user_email])
+    
+    # تقرير المهام بشكل HTML
+    msg.html = render_template('email_report.html', tasks_report=tasks_report, frequency=frequency)
+    mail.send(msg)
+
+# توليد التقارير بناءً على التكرار
+@auth.route('/generate_reports', methods=['GET'])
+def generate_reports():
+    # التحقق من الاشتراكات
+    report_subscriptions = ReportSubscription.query.all()
+    
+    for subscription in report_subscriptions:
+        # تحديد فترة التقارير بناءً على التكرار
+        if subscription.frequency == 'daily':
+            start_date = datetime.now() - timedelta(days=1)
+        elif subscription.frequency == 'weekly':
+            start_date = datetime.now() - timedelta(weeks=1)
+        elif subscription.frequency == 'monthly':
+            start_date = datetime.now() - timedelta(days=30)
+        else:
+            continue  # إذا كان التكرار غير صحيح
+
+        # الحصول على المهام التي انتهت في الفترة المحددة
+        tasks = Task.query.filter(Task.end_date >= start_date).all()
+        
+        tasks_report = []
+        for task in tasks:
+            tasks_report.append({
+                'title': task.title,
+                'status': task.status,
+                'end_date': task.end_date.strftime('%d/%m/%Y %H:%M')
+            })
+        
+        # إرسال البريد الإلكتروني للمستخدم
+        send_report_email(subscription.user.email, tasks_report, subscription.frequency)
+        
+    return "Reports sent successfully", 200
+

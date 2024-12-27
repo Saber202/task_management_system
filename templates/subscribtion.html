@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscribe to Reports</title>
+</head>
+<body>
+    <h2>Subscribe to Reports</h2>
+    <form id="subscribe-form">
+        <label for="start_date">Start Date (DD:MM:YYYY HH):</label>
+        <input type="text" id="start_date" name="start_date" placeholder="01:01:2024 14" required>
+        <br>
+        <label for="frequency">Frequency:</label>
+        <select id="frequency" name="frequency">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+        </select>
+        <br>
+        <label for="report_time">Report Time (Hour):</label>
+        <input type="number" id="report_time" name="report_time" min="0" max="23" required>
+        <br>
+        <button type="submit">Subscribe</button>
+    </form>
+
+    <h2>Unsubscribe</h2>
+    <button id="unsubscribe-button">Unsubscribe</button>
+
+    <script src="subscribtion.js"></script>
+</body>
+</html>
