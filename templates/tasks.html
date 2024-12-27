@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management</title>
+    <script defer src="tasks.js"></script>
+</head>
+<body>
+    <h1>Task Management</h1>
+    <button id="logout-button">Log Out</button>
+
+    <!-- إضافة المهام -->
+    <form id="task-form">
+        <h2>Create a Task</h2>
+        <label for="title">Task Title:</label>
+        <input type="text" id="title" required>
+        <label for="description">Description:</label>
+        <textarea id="description"></textarea>
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date">
+        <label for="due_date">Due Date:</label>
+        <input type="date" id="due_date">
+        <button type="submit">Add Task</button>
+    </form>
+
+    <!-- عرض المهام -->
+    <div id="task-list">
+        <h2>Your Tasks</h2>
+        <ul id="tasks"></ul>
+    </div>
+<script src="tasks.js"></script>
+</body>
+</html>
